@@ -19,6 +19,8 @@ import scipy.stats
 from util.article_plots import set_size, column_width, text_width
 
 # TODO: Fix all file reference
+# TODO: Import CSVs for analysis
+# TODO: Add usage descriptions
 # TODO: Clean comment outs
 
 _ACTION_COLUMNS = ["PROX", "REPHRASE", "DEL", "ADD", "EXAMPLE", "EXPLAIN", "EXPLICIT", "REORDER", "SPLIT"]
