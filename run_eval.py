@@ -20,7 +20,7 @@ import random
 import numpy as np
 from nltk.translate import meteor_score
 from torch.utils.data.dataloader import DataLoader
-from datasets import load_dataset, load_metric, Dataset  # , tqdm
+from datasets import load_dataset, load_metric, Dataset
 from datasets.dataset_dict import DatasetDict
 from transformers import (
     AutoModelForSeq2SeqLM, DataCollatorForSeq2Seq, BatchEncoding, PreTrainedTokenizer, AutoModel, PreTrainedModel,
@@ -44,9 +44,6 @@ if is_torch_tpu_available():
     import torch_xla.core.xla_model as xm
     import torch_xla.debug.metrics as met
     import torch_xla.distributed.parallel_loader as pl
-
-# TODO: Fix comment outs
-# TODO: Add functionality descriptions
 
 
 def parse_model_name(model_name: str) -> dict:
@@ -249,7 +246,6 @@ def evalution(model_path: str, args, metrics={}):
         tokenizer = AutoTokenizer.from_pretrained(model_path,
                                                   cache_dir=args.transformers_cache)
     else:
-        # tokenizer = AutoTokenizer.from_pretrained('/Users/eytan.chamovitz/Downloads/t5-small-for-debug')
         tokenizer = AutoTokenizer.from_pretrained(model_path)
 
     logger.warning(f"Loading Model {model_name}")
@@ -257,7 +253,6 @@ def evalution(model_path: str, args, metrics={}):
         model_to_eval = AutoModelForSeq2SeqLM.from_pretrained(model_path, **model_config_dict,
                                                               cache_dir=args.transformers_cache)
     else:
-        # model_to_eval = AutoModelForSeq2SeqLM.from_pretrained('/Users/eytan.chamovitz/Downloads/t5-small-for-debug', **model_config_dict)
         model_to_eval = AutoModelForSeq2SeqLM.from_pretrained(model_path, **model_config_dict)
     model_to_eval.to(device)
 
@@ -272,7 +267,7 @@ def evalution(model_path: str, args, metrics={}):
                 if 't5' in tokenizer.name_or_path:  # T5 uses -100 as padding token. BART uses 1 as padding token
                     labels["input_ids"] = [np.where(np.array(label) != 0, np.array(label), -100).tolist() for label in
                                            labels["input_ids"]]
-            elif isinstance(refs[0], list): # if has multiple target senteces (ASSET, TURKCORPUS)
+            elif isinstance(refs[0], list):  # if has multiple target senteces (ASSET, TURKCORPUS)
                 tokenized = [[tokenizer(r, padding="max_length", truncation=True) for r in ref_group] for ref_group in
                              refs]
                 # [item for sublist in t for item in sublist]
@@ -364,12 +359,6 @@ def evalution(model_path: str, args, metrics={}):
         for k in eval_dataset.keys():
             eval_dataset[k] = eval_dataset[k].select(range(args.trunc_dataset))
 
-    # if model_args["model_type"] == "t5_classification" and not (args.no_add_info or args.single_det or args.single_oracle_rand or
-    #                                                             args.single_oracle_det or args.double_det or
-    #                                                             args.double_oracle_rand or args.double_oracle_det):
-    #     eval_dataset = eval_dataset.map(add_t5_mask)
-    #     _GET_CLS = True
-
     logger.warning(f"Tokenizing dataset")
     eval_ds_tokenized = eval_dataset.map(preprocess_function, batched=True)
 
@@ -390,7 +379,6 @@ def evalution(model_path: str, args, metrics={}):
 
     logging.set_verbosity_info()
     logger.warning(f"#### Results for {model_name} ####")
-    # logger.warning(f"Baseline results: {baseline_sari_score}")
     logger.warning(f"% Identical: {pct_identical}")
     logger.warning(f"Results DF:\n{evaluator.get_results_dataframe_string(sari_score)}")
     if args.get_full_result:
@@ -398,14 +386,10 @@ def evalution(model_path: str, args, metrics={}):
             f.write(evaluator.get_results_dataframe_string(sari_score))
             evaluator.print_asset_results(f, model_name, sari_score, pct_identical, result)
 
-    # logger.warning("Clearing all objects from GPU")
-    # del evaluator
-    # del model_to_eval
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Run evaluation of T5 model trained for cognitive simplification")
-    parser.add_argument('--eval_dataset', type=str, default='asset')
+    parser.add_argument('--eval_dataset', type=str, default='asset', help="To run on the FestAbility Transcripts dataset, change this value to `cognitive`.")
     parser.add_argument('--transformers_cache', type=str)
     parser.add_argument('--results_folder', type=str, default='.')
     parser.add_argument('--get_full_result', action='store_true')
@@ -435,7 +419,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # TODO: add assertions to argument formats (i.e. paths)
     logger = logging.get_logger(__name__)
     if args.debug:
         logging.set_verbosity_debug()
