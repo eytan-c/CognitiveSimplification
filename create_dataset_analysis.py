@@ -7,6 +7,7 @@ import logging
 
 # TODO: Add usage description
 # TODO: Clean-up comment outs
+# TODO: Add different file saving types
 
 """
     Sorting fields:
