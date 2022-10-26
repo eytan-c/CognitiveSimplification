@@ -1,2 +1,8 @@
+<<<<<<< Updated upstream
 
 .idea/workspace.xml
+=======
+.DS_Store
+*.iml
+.idea/*
+>>>>>>> Stashed changes
