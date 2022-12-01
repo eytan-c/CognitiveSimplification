@@ -205,7 +205,7 @@ def write_to_json(row: Union[NamedTuple, pd.Series], file: TextIO, corpus: str):
     file.write(f"{json.dumps(entry)}\n")
 
 
-if __name__ == '__main__':  # TODO: Cleanup comment outs
+if __name__ == '__main__':  # TO_DO: Cleanup comment outs
     parser = argparse.ArgumentParser("Create the final dataset formats for pre-analyzed CSVs.\n"
                                      "Can create both txt files and json files.\n"
                                      "Requires pre-analyzed datasets saved in csv format in a single directory")
@@ -215,10 +215,7 @@ if __name__ == '__main__':  # TODO: Cleanup comment outs
 
     args = parser.parse_args()
 
-    # dataset_csv_path = pathlib.Path("/Users/eytan.chamovitz/PycharmProjects/CogSimp/csvs")
     dataset_csv_path = pathlib.Path(args.dataset_path)
-    # outpath = "/Users/eytan.chamovitz/PycharmProjects/CogSimp/data"
-    # outpath = args.output_path
 
     pathlib.Path(f"{args.output_path}/text_files").mkdir(parents=True, exist_ok=True)
     pathlib.Path(f"{args.output_path}/jsons").mkdir(parents=True, exist_ok=True)
