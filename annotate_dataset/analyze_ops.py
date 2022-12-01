@@ -20,8 +20,6 @@ LOGGER = setup_logger('classify_operations', logging.INFO)
 DELETE_PCT = 0.2
 ADD_PCT = 0.2
 
-# TODO: look into pyenv
-
 """
     1. Proximation-  All  of  these  operations  are tested a word by word basis using the Universal Dependency parse trees of the source and the target.
         (a) Change of person point of view-  We check if there was a change in person POV from 3rd to 2nd, 3rd to 1st, or 2nd to 1st.
@@ -788,7 +786,7 @@ def get_moved_words_out_of_order(source, target, source_labels, target_labels):
 
 
 def get_noun_phrases_out_of_order(source, target, source_labels, target_labels):
-    # TODO: Try to match with BERTscores
+    # TO_DO: Try to match with BERTscores
     if len(source_labels) == 0 or len(target_labels) == 0:
         return []
     root_counter = Counter()
@@ -831,11 +829,9 @@ def get_svo_out_of_order(source, target):
 
 
 def classify_intra_sentence_rearrange(source, target, lang, source_labels, target_labels):
-    # TODO: Think of how to find ooo noun phrases
+    # TO_DO: Think of how to find ooo noun phrases
     number_moved_words_ooo = get_moved_words_out_of_order(source, target, source_labels, target_labels)
     # noun_phrases_ooo = get_noun_phrases_out_of_order(source, target, source_labels, target_labels)
-    # print(number_moved_words_ooo)
-    # print(noun_phrases_ooo)
     num_svo_ooo = get_svo_out_of_order(source, target)
     return number_moved_words_ooo, num_svo_ooo  #, noun_phrases_ooo
 
@@ -874,8 +870,8 @@ def classify_sentence_splitting(source, target, lang, align_type: AlignmentTypes
 
 
 def load_testing_info():
-    #  TODO: get correct SPPDB file
-    ppdb_path = '/Users/eytan.chamovitz/PycharmProjects/NLP_HW/project/DHLS/SPPDB_lexicon.json'
+    #  TO_DO: get correct SPPDB file
+    ppdb_path = 'simple_ppdbs/en_sppdb.json'
     with open(ppdb_path, 'r') as f:
         ppdb = json.load(f)
     ppdb["absentee ballot"] = [[-1, ["vote", "from", "home"]]]
@@ -1038,28 +1034,31 @@ def test_access():
               f"\t{get_deptree_depth_ratio(test_doc_reg, test_doc_sim, align_type)=}")
 
 
-if __name__ == '__main__':
-    #  TODO: Think of how to preprocess the sentences in the dataset (for each function and sub-classification)
-    #  TODO: In areas where word meaning count (such as word rank / moved words) remove punctuations
-    #  TODO: Cleanup comment outs
-    # time.sleep(1)
-    # LOGGER.warning("Proximation Test")
-    # test_proximation()
-    # time.sleep(0.001)
-    LOGGER.warning("Paraphrasing Test")
-    test_paraphrasing()
-    # time.sleep(0.001)
-    # LOGGER.warning("Deletion Test")
-    # test_deleting_info()
-    # time.sleep(0.001)
-    # LOGGER.warning("Adding Test")
-    # test_adding_info()
-    # time.sleep(0.001)
-    # LOGGER.warning("Intra-reorder Test")
-    # test_intra_reorder()
-    # time.sleep(0.001)
-    # LOGGER.warning("Explicitation Test")
-    # test_explicitation()
-    # time.sleep(0.001)
-    # LOGGER.warning("ACCESS Test")
-    # test_access()
+"""
+Use the lines below to test each of the functions
+"""
+# if __name__ == '__main__':
+#     # TO_DO: Think of how to preprocess the sentences in the dataset (for each function and sub-classification)
+#     # TO_DO: In areas where word meaning count (such as word rank / moved words) remove punctuations
+#     # TO_DO: Cleanup comment outs
+#     time.sleep(1)
+#     LOGGER.warning("Proximation Test")
+#     test_proximation()
+#     time.sleep(0.001)
+#     LOGGER.warning("Paraphrasing Test")
+#     test_paraphrasing()
+#     time.sleep(0.001)
+#     LOGGER.warning("Deletion Test")
+#     test_deleting_info()
+#     time.sleep(0.001)
+#     LOGGER.warning("Adding Test")
+#     test_adding_info()
+#     time.sleep(0.001)
+#     LOGGER.warning("Intra-reorder Test")
+#     test_intra_reorder()
+#     time.sleep(0.001)
+#     LOGGER.warning("Explicitation Test")
+#     test_explicitation()
+#     time.sleep(0.001)
+#     LOGGER.warning("ACCESS Test")
+#     test_access()
