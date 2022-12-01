@@ -1,4 +1,5 @@
 import os
+import time
 
 from annotate_dataset.asset_actions import get_tokenized_and_parsing_from_list, get_word_level
 import pyter
@@ -48,6 +49,17 @@ def split_sentences(line) -> List[str]:
 
 
 def read_files(regular_file: Union[str, pathlib.Path], simple_file: Union[str, pathlib.Path]) -> List[Dict[str, Union[str, int]]]:
+    """
+    Reads two aligned txt files. Assumes that lines numbers are aligned between regular_file and simple_file.
+    E.g. regular_file:10 would match simple_file:10.
+    Also assumes particular format of alignment files - Each documents starts with a row:
+    ############### <DOC_TITLE> ###############
+    and ends with a row:
+    ############### END <DOC_TITLE> ###############
+    Each document also must contain at least 1 sub-document (chapter, sections, etc.)
+    The start of each is marked with a row:
+    '>>>>> <sub_doc_number>'
+    """
     doc_title = ""
     sub_doc_id = ""
     sent_num = 0
@@ -81,7 +93,7 @@ def read_files(regular_file: Union[str, pathlib.Path], simple_file: Union[str, p
                 sub_doc_id = get_sub_doc_id(r_line)
                 sent_num = 0
             else:  # we are at lines that we need to add "as is" to the files.
-                r_split = split_sentences(r_line)
+                r_split = split_sentences(r_line)  # need to split the sentences to get alignment type
                 s_split = split_sentences(s_line)
                 result.append({"doc_title": doc_title, "sub_doc_id": sub_doc_id, "sentence_num": sent_num,
                                "entry_type": get_entry_type((r_split, s_split)),
@@ -109,8 +121,7 @@ def get_TER_scores(reg_sents, sim_sents, nlp):
 
 
 def create_wordlevel_datasets(path, ds_name, input=None, lang="en"):
-    # data_path = "/Users/eytan.chamovitz/PycharmProjects/CogSimp/csvs/base_csvs/UNCPRD/uncrpd.csv"
-    if input is None:
+    if input is None:  # we read from txt files, and already saved the correct csv.
         input_file = f"{path}/{ds_name}.csv"
     else:
         input_file = input
@@ -168,7 +179,7 @@ def create_wordlevel_datasets(path, ds_name, input=None, lang="en"):
             f"{path}/{ds_name}+actions+word_level.csv")
 
 
-if __name__ == "__main__":  # TODO: Cleanup comment outs
+if __name__ == "__main__":  # TO_DO: Cleanup comment outs
     parser = argparse.ArgumentParser("Convert aligned simplification datasets into csvs for further analysis.")
     subparsers = parser.add_subparsers(dest='subcommand')
     parser_txt = subparsers.add_parser("txt_to_base", help="Convert aligned text files to base CSV.")
@@ -188,31 +199,12 @@ if __name__ == "__main__":  # TODO: Cleanup comment outs
     parser_csv.add_argument("--dataset_name", required=True, type=str,
                             help="Name of the dataset, the final output will be <dataset_name>+actions+word_level.csv")
 
-    # args = parser.parse_args()
-    # config = ["txt_to_base",
-    #           "--reg_file", "/Users/eytan.chamovitz/Documents/GitHub/HebrewCognitiveSimplification/Raw Data/Aligned/regular_edited.txt",
-    #           "--sim_file", "/Users/eytan.chamovitz/Documents/GitHub/HebrewCognitiveSimplification/Raw Data/Aligned/simplified_edited.txt",
-    #           "--data_path", "/Users/eytan.chamovitz/PycharmProjects/CogSimp/csvs/base_csvs/HebrewDataset",
-    #           "--dataset_name", "HebCogSimp"
-    #           ]
-    # config = ["csv_to_base",
-    #           "--input_file", "/Users/eytan.chamovitz/PycharmProjects/CogSimp/csvs/base_csvs/UNCPRD/uncrpd.csv",
-    #           "--data_path", "/Users/eytan.chamovitz/PycharmProjects/CogSimp/csvs/base_csvs/UNCPRD",
-    #           "--dataset_name", "uncrpd"
-    #           ]
-    # args = parser.parse_args(config)
     args = parser.parse_args()
 
     if args.subcommand == "txt_to_base":
-        # reg_file = "/Users/eytan.chamovitz/Desktop/UNCPRD_regular_edited.txt"
-        # reg_file = args.reg_file
-        # sim_file = "/Users/eytan.chamovitz/Desktop/UNCPRD_simple_edited.txt"
-        # sim_file = args.sim_file
-
-        # output_file = f"/Users/eytan.chamovitz/PycharmProjects/CogSimp/csvs/base_csvs/UNCPRD/uncrpd.csv"
         input_file = f"{args.data_path}/{args.dataset_name}.csv"
         r = read_files(args.reg_file, args.sim_file)
         df = pd.DataFrame(r)
         df.to_csv(input_file, sep=";")
 
-    create_wordlevel_datasets(args.data_path, args.dataset_name, args.input_file)
+    create_wordlevel_datasets(args.data_path, args.dataset_name, input=args.input_file)
