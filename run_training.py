@@ -44,11 +44,6 @@ if is_torch_tpu_available():
     import torch_xla.debug.metrics as met
     import torch_xla.distributed.parallel_loader as pl
 
-# from pynvml import *
-
-# TODO: Fix comment outs
-# TODO: Add functionality descriptions
-
 
 def set_up_global_vars():
     pass
@@ -196,7 +191,6 @@ def compute_metrics(sources, predictions, references):
     if _COMPUTE_BERTSCORE:
         # bertscore expects regular sentences
         bertscore_result = bertscore.compute(predictions=decoded_preds, references=decoded_labels, lang='en')
-        # print(bertscore_result)
         bertscore_result = {f"bertscore_{k}": np.mean(v) for k, v in bertscore_result.items() if k != 'hashcode'}
 
     # BLEU expects each prediction to be a tokenized sentence and each reference to be a list of tokenized sentences
@@ -205,15 +199,10 @@ def compute_metrics(sources, predictions, references):
     tokenized_sources = [nltk.word_tokenize(source.strip()) for source in decoded_sources]
 
     bleu_result = bleu.compute(predictions=tokenized_preds, references=[[label] for label in tokenized_labels])
-    # for k,v in bleu_result.items():
-    #   print(f"{k}: {v}")
+
     for i, precision in enumerate(bleu_result['precisions']):
         bleu_result[f'{i + 1}-gram_precision'] = precision
     bleu_result.pop("precisions")
-    # for k in bleu_result.keys():
-    #     if k != 'bleu':
-    #       bleu_result[f"bleu_{k}"] = bleu_result.pop(k)
-    # bleu_result = {f"bleu_{k}": v for k, v in bleu_result.items()}
 
     # Sari expects a space delimited tokenised sentence, and the references to be a list of space delimited tokenized senteces
     # METEOR expects a space delimited tokenised sentence
@@ -227,7 +216,6 @@ def compute_metrics(sources, predictions, references):
         result = {**sair_result, **meteor_result, **bleu_result, **bertscore_result}
     else:
         result = {**sair_result, **meteor_result, **bleu_result}
-    # print(result)
     return {k: round(v, 4) for k, v in result.items()}
 
 
@@ -240,11 +228,11 @@ class NumpyEncoder(json.JSONEncoder):
 
 def create_model_name(args: argparse.Namespace):
     keys_for_name = ["training_dataset", "model_name",
-                     #"compute_bertscore",
+                     # "compute_bertscore",
                      "add_t5_header",
                      "max_gen_len", "gen_beams_num",
-                     #"train_batch_size", "eval_batch_size", "grad_accum_steps",
-                     #"warm_up_steps",
+                     # "train_batch_size", "eval_batch_size", "grad_accum_steps",
+                     # "warm_up_steps",
                      "train_epochs", "fp16",
                      "adafactor",
                      ]
@@ -258,18 +246,6 @@ def create_model_name(args: argparse.Namespace):
     result = f"{result}&time={_DATE}"
 
     return result
-
-
-# def get_cuda_memory():
-#     # t = torch.cuda.get_device_properties(0).total_memory
-#     # r = torch.cuda.memory_reserved()
-#     # a = torch.cuda.memory_allocated()
-#     # f = r-a  # free inside reserved
-#     # return {"total": t, "reserved": r, "allocated": a, "free": f}
-#     # return torch.cuda.memory_stats_as_nested_dict()
-#     h = nvmlDeviceGetHandleByIndex(0)
-#     info = nvmlDeviceGetMemoryInfo(h)
-#     return {'total': info.total, 'free': info.free, 'used': info.used}
 
 
 def assert_legal_args(args):
@@ -320,16 +296,9 @@ if __name__ == '__main__':
     training_args_group.add_argument('--eval_strategy', choices=["no", "steps", "epoch"], default="epoch")
     training_args_group.add_argument('--trunc_dataset', type=int)
 
-    # os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
-
-    # nvmlInit()
-
     args = parser.parse_args()
     assert_legal_args(args)
-    # TODO: add assertions to argument formats (i.e. paths)
-    # TO_DO: add loggers for step along the way
-    # TO_DO: finalize all changes on the server to the git
-    # TO_DO: add new naming conventions
+
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     if is_torch_tpu_available():
         device = xm.xla_device()
@@ -358,7 +327,6 @@ if __name__ == '__main__':
         "max_length": max_len,
     }
 
-    # logger.warning(f"GPU Memory State: {get_cuda_memory()}")
     logger.warning(f"Torch version: {torch.__version__}")
     logger.warning(f"Torch CUDA version: {torch.version.cuda}")
 
@@ -392,7 +360,6 @@ if __name__ == '__main__':
     save_dir = f"{save_dir}{create_model_name(args)}"
     if args.model_save_folder != '.':
         save_dir = f"{args.model_save_folder}/{save_dir}"
-    # save_dir = f"{save_dir}_maxlen_{max_len}_v{version}"
 
     nltk.download('punkt')
 
@@ -412,32 +379,26 @@ if __name__ == '__main__':
         meteor = load_metric("meteor")
         bleu = load_metric("bleu")
 
-    # logger.warning(f"GPU Memory State: {get_cuda_memory()}")
-
     logger.warning("Loading Datasets")
     datasets, asset = load_datasets(args)
     if args.trunc_dataset is not None:
         for k in datasets.keys():
             datasets[k] = datasets[k].select(range(args.trunc_dataset))
-    # logger.warning(f"GPU Memory State: {get_cuda_memory()}")
 
     logger.warning("Loading Tokenizer")
     if args.transformers_cache is not None:
         tokenizer = AutoTokenizer.from_pretrained(args.model_name, cach_dir=args.transformers_cache)
     else:
-        # tokenizer = AutoTokenizer.from_pretrained('/Users/eytan.chamovitz/Downloads/t5-small-for-debug')
         tokenizer = AutoTokenizer.from_pretrained(args.model_name)
     special_toks = ["<PROX>", "<REPHRASE>", "<DEL>", "<ADD>", "<EXAMPLE>",
                     "<EXPLAIN>", "<EXPLICIT>", "<REORDER>", "<SPLIT>"]
     special_tokens_dict = {"additional_special_tokens": special_toks}
     tokenizer.add_special_tokens(special_tokens_dict)
-    # logger.warning(f"GPU Memory State: {get_cuda_memory()}")
 
     if args.t5_classification:
         logger.warning("Processing Dataset for T5 Classification")
         datasets = datasets.map(add_t5_mask)
         asset = asset.map(add_t5_mask)
-        # logger.warning(f"GPU Memory State: {get_cuda_memory()}")
 
     if args.bart_classification:
         logger.warning("Processing Dataset for BART Classification")
@@ -447,19 +408,13 @@ if __name__ == '__main__':
     logger.warning("Tokenizing Datasets")
     tokenized_datasets = datasets.map(preprocess_function, batched=True)
     asset_tokenized = asset.map(preprocess_function, batched=True)
-    # logger.warning(f"GPU Memory State: {get_cuda_memory()}")
-
-    # if 'bart' in model_name:
-    #     model_config_dict["vocab_size"] = len(tokenizer.get_vocab())
 
     logger.warning("Loading Model")
     if args.transformers_cache is not None:
         model = AutoModelForSeq2SeqLM.from_pretrained(args.model_name, **model_config_dict,
                                                       cache_dir=args.transformers_cache)
     else:
-        # model = AutoModelForSeq2SeqLM.from_pretrained('/Users/eytan.chamovitz/Downloads/t5-small-for-debug', **model_config_dict)
         model = AutoModelForSeq2SeqLM.from_pretrained(args.model_name, **model_config_dict)
-    # logger.warning(f"GPU Memory State: {get_cuda_memory()}")
 
     if 'bart' in model.name_or_path:
         model.resize_token_embeddings(len(tokenizer))
@@ -484,11 +439,9 @@ if __name__ == '__main__':
         # push_to_hub=True,
         # push_to_hub_model_id=f"{model_name}-finetuned-xsum",
     )
-    # logger.warning(f"GPU Memory State: {get_cuda_memory()}")
 
     logger.warning("Loading Collator")
     data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
-    # logger.warning(f"GPU Memory State: {get_cuda_memory()}")
     """## Define trainers"""
 
     logger.warning(f"Loading Trainer")
@@ -501,13 +454,11 @@ if __name__ == '__main__':
         tokenizer=tokenizer,
         compute_metrics=compute_metrics
     )
-    # logger.warning(f"GPU Memory State: {get_cuda_memory()}")
     _COMPUTE_BERTSCORE = False
     logger.warning("Training")
     trainer.train()
 
     """## Save model"""
-    # logger.warning(f"GPU Memory State: {get_cuda_memory()}")
     logger.warning("Saving Model")
     trainer.save_model()
 

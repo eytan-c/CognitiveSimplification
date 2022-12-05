@@ -114,7 +114,7 @@ logger = logging.get_logger(__name__)
 
 class SariSeq2SeqTrainer(Seq2SeqTrainer):
 
-    def evaluation_loop(
+    def evaluation_loop(  # taken from huggingface
             self,
             dataloader: DataLoader,
             description: str,
@@ -379,22 +379,16 @@ class MultiRefEvaluator:
             with torch.no_grad():
                 for b in tqdm(iter(dataloader)):
                     b['attention_mask'] = b['attention_mask'].to(self.device)
-                    # print(f"b['attention_mask']: {b['attention_mask'].get_device()}")
                     b['input_ids'] = b['input_ids'].to(self.device)
-                    # print(f"b['input_ids']: {b['input_ids'].get_device()}")
                     pred = model.generate(**b)
                     preds = nested_concat(preds, pred) if preds is not None else pred
-                # print(preds)
-                # print(preds.size())
                 preds = preds.detach().cpu().numpy()
                 if return_classification:
                     idxs = np.isin(preds, self.tokenizer.additional_special_tokens_ids)
                     cls_preds = [preds[i, idxs[i]].tolist() for i in range(len(idxs))]
-                    # cls_preds = np.where(preds in self.tokenizer.all_special_ids, preds, self.tokenizer.pad_token_id)
                     cls_preds_detoked = self.tokenizer.batch_decode(cls_preds)
                     cls_preds_detoked = [self.tokenizer.tokenize(cls_p) for cls_p in cls_preds_detoked]
                 preds = np.where(preds != -100, preds, self.tokenizer.pad_token_id)
-                # print(preds)
                 preds_detoked = self.tokenizer.batch_decode(preds, skip_special_tokens=True)
 
         sources = self.tokenizer.batch_decode(data['input_ids'], skip_special_tokens=True)
@@ -419,11 +413,10 @@ class MultiRefEvaluator:
             "sys_sents": decoded_preds,  # (len = n_samples)
             "refs_sents": [[target[i] for target in decoded_labels] for i in range(self.num_annots)],  # (shape = (n_references, n_samples))
         }
-        # print(sari_args)
+
         if save_sari_args is not None:
             with open(save_sari_args, "w") as o:
                 o.write(json.dumps(sari_args))
-
 
         def return_result(sari_args, return_preds):
             add_score, keep_score, del_score = get_corpus_sari_operation_scores(**sari_args)
@@ -448,25 +441,19 @@ class MultiRefEvaluator:
             for e in data['actions']:
                 all_acts.update(e)
             all_acts = sorted(all_acts.keys())
-            # print(all_acts)
             all_acts = {a: [] for a in all_acts}
-            # print(all_acts)
             for i, e in enumerate(data['actions']):
                 for act in e:
                     all_acts[act].append(i)
-            # print(all_acts)
             for act, idxs in all_acts.items():
                 filtered_targets = [targets for i, targets in enumerate(decoded_labels) if i in idxs]
                 filtered_tokenized_preds = [pred for i, pred in enumerate(tokenized_preds) if i in idxs]
                 filtered_tokenized_targets = [targets for i, targets in enumerate(tokenized_labels) if i in idxs]
-                # print(filtered_targets)
                 updated_args = {
                     "orig_sents": list(np.array(sari_args["orig_sents"])[idxs]),  # (len = n_samples)
                     "sys_sents": list(np.array(sari_args["sys_sents"])[idxs]),  # (len = n_samples)
                     "refs_sents": [[target[i] for target in filtered_targets] for i in range(self.num_annots)]  # (shape = (n_references, n_samples))
                 }
-                # print(updated_args)
-                # print(f"{len(updated_args['orig_sents'])},{len(updated_args['sys_sents'])},{len(updated_args['refs_sents'])}")
                 sari_score, add_score, keep_score, del_score, _ = return_result(updated_args, False)
                 split_result = {}
                 if len(self.metrics) > 0:
@@ -475,24 +462,18 @@ class MultiRefEvaluator:
                                "keep_score": keep_score, "del_score": del_score, **split_result}
         if split_aligns:
             all_aligns = sorted(Counter(data['entry_type']).keys())
-            # print(all_aligns)
             all_aligns = {a: [] for a in all_aligns}
-            # print(all_aligns)
             for i, e in enumerate(data['entry_type']):
                 all_aligns[e].append(i)
-            # print(all_aligns)
             for align, idxs in all_aligns.items():
                 filtered_targets = [targets for i, targets in enumerate(decoded_labels) if i in idxs]
                 filtered_tokenized_preds = [pred for i, pred in enumerate(tokenized_preds) if i in idxs]
                 filtered_tokenized_targets = [targets for i, targets in enumerate(tokenized_labels) if i in idxs]
-                # print(filtered_targets)
                 updated_args = {
                     "orig_sents": list(np.array(sari_args["orig_sents"])[idxs]),  # (len = n_samples)
                     "sys_sents": list(np.array(sari_args["sys_sents"])[idxs]),  # (len = n_samples)
                     "refs_sents": [[target[i] for target in filtered_targets] for i in range(self.num_annots)]  # (shape = (n_references, n_samples))
                 }
-                # print(updated_args)
-                # print(f"{len(updated_args['orig_sents'])},{len(updated_args['sys_sents'])},{len(updated_args['refs_sents'])}")
                 sari_score, add_score, keep_score, del_score, _ = return_result(updated_args, False)
                 split_result = {}
                 if len(self.metrics) > 0:
@@ -513,14 +494,11 @@ class MultiRefEvaluator:
                 filtered_targets = [targets for i, targets in enumerate(decoded_labels) if i in idxs]
                 filtered_tokenized_preds = [pred for i, pred in enumerate(tokenized_preds) if i in idxs]
                 filtered_tokenized_targets = [targets for i, targets in enumerate(tokenized_labels) if i in idxs]
-                # print(filtered_targets)
                 updated_args = {
                     "orig_sents": list(np.array(sari_args["orig_sents"])[idxs]),  # (len = n_samples)
                     "sys_sents": list(np.array(sari_args["sys_sents"])[idxs]),  # (len = n_samples)
                     "refs_sents": [[target[i] for target in filtered_targets] for i in range(self.num_annots)]  # (shape = (n_references, n_samples))
                 }
-                # print(updated_args)
-                # print(f"{len(updated_args['orig_sents'])},{len(updated_args['sys_sents'])},{len(updated_args['refs_sents'])}")
                 sari_score, add_score, keep_score, del_score, _ = return_result(updated_args, False)
                 split_result = {}
                 if len(self.metrics) > 0:
@@ -536,88 +514,6 @@ class MultiRefEvaluator:
             return result, {"orig_sents": sources, "sys_sents": preds_detoked, "actions": data["actions"], "refs_sents": targets, "cls_preds": cls_preds_detoked}
         else:
             return result, {}
-
-
-# class T5Classifier(T5PreTrainedModel):
-#     """ Taken from huggingface.co examples """
-#     authorized_missing_keys = [
-#         r"encoder\.embed_tokens\.weight",
-#     ]
-#
-#     def __init__(self, config: T5Config, classifier_config: dict):
-#         super().__init__(config)
-#         self.num_labels = classifier_config['num_labels']
-#         self.dropout_prob = classifier_config['dropout_prob']
-#         self.shared = torch.nn.Embedding(config.vocab_size, config.d_model)
-#
-#         encoder_config = copy.deepcopy(config)
-#         encoder_config.use_cache = False
-#         encoder_config.is_encoder_decoder = False
-#         self.encoder = T5Stack(encoder_config, self.shared)
-#
-#
-#
-#         self.init_weights()
-#
-#         # Model parallel
-#         self.model_parallel = False
-#         self.device_map = None
-#
-#     def parallelize(self, device_map=None):
-#         self.device_map = (
-#             get_device_map(len(self.encoder.block), range(torch.cuda.device_count()))
-#             if device_map is None
-#             else device_map
-#         )
-#         assert_device_map(self.device_map, len(self.encoder.block))
-#         self.encoder.parallelize(self.device_map)
-#         self.model_parallel = True
-#
-#     def deparallelize(self):
-#         self.encoder.deparallelize()
-#         self.encoder = self.encoder.to("cpu")
-#         self.model_parallel = False
-#         self.device_map = None
-#         torch.cuda.empty_cache()
-#
-#     def get_input_embeddings(self):
-#         return self.shared
-#
-#     def set_input_embeddings(self, new_embeddings):
-#         self.shared = new_embeddings
-#         self.encoder.set_input_embeddings(new_embeddings)
-#
-#     def get_encoder(self):
-#         return self.encoder
-#
-#     def _prune_heads(self, heads_to_prune):
-#         for layer, heads in heads_to_prune.items():
-#             self.encoder.layer[layer].attention.prune_heads(heads)
-#
-#     def forward(
-#             self,
-#             input_ids=None,
-#             attention_mask=None,
-#             head_mask=None,
-#             inputs_embeds=None,
-#             output_attentions=None,
-#             output_hidden_states=None,
-#             return_dict=None,
-#     ):
-#
-#         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-#
-#         encoder_outputs = self.encoder(
-#             input_ids=input_ids,
-#             attention_mask=attention_mask,
-#             inputs_embeds=inputs_embeds,
-#             head_mask=head_mask,
-#             output_attentions=output_attentions,
-#             output_hidden_states=output_hidden_states,
-#             return_dict=return_dict,
-#         )
-#
-#         return encoder_outputs
 
 
 class T5CustomClassifier(torch.nn.Module):
