@@ -1,7 +1,10 @@
 import argparse
 
 from annotate_dataset.analyze_ops import *
+import pandas as pd
 import pathlib
+import coreferee
+import coreferee_model_en
 from typing import Match
 
 SPACE_RE = re.compile(r"( ){2,}")
@@ -77,7 +80,7 @@ def create_record(doc_title, alignment, entry_type_num, reg_sent, sim_sent, ter,
 
 def classify_dataset(dataset: str, save_path: pathlib.Path, nlp, lex_probability, ppdb,
                      dataset_type="+actions+word_level", sep=';', lang='en',
-                     source_folder="/Users/eytan.chamovitz/PycharmProjects/AutoLingSimp"):
+                     source_folder="."):
     """
     Add operations analysis to dataset.
     Expects files to be saved in CSV format, with at least the following columns:
@@ -98,7 +101,7 @@ def classify_dataset(dataset: str, save_path: pathlib.Path, nlp, lex_probability
     LOGGER.warning(f"Loading dataset {dataset} DF...")
 
     data_file = pathlib.Path(f"{source_folder}/{dataset}{dataset_type}.csv")  # filepath to load
-    old_df = pd.read_csv(data_file, sep=sep)  # the old dataframe to analyze
+    old_df = pd.read_csv(data_file, sep=sep, on_bad_lines='skip')  # the old dataframe to analyze
     if 'alignment' not in old_df.columns:
         old_df['alignment'] = ["" for i in range(len(old_df))]
     old_df.fillna(value="", inplace=True)  # remove NaNs from the old dataframe
@@ -114,16 +117,6 @@ def classify_dataset(dataset: str, save_path: pathlib.Path, nlp, lex_probability
                                                'sim_sent', 'TER_score', 'reg_word_label_counts',
                                                'sim_word_label_counts', 'reg_auto_labels',
                                                'sim_auto_labels']].itertuples(), total=len(old_df)):
-        # old_df[['doc_title', 'entry_type', 'reg_sent',
-        #                                   'sim_sent', 'TER_score', 'reg_word_label_counts',
-        #                                   'sim_word_label_counts', 'reg_auto_labels',
-        #                                   'sim_auto_labels']].itertuples():
-
-        # print(idx, doc_title, entry_type_num,
-        #       reg_sent, sim_sent, ter,
-        #       reg_label_count, sim_label_count,
-        #       reg_labels, sim_labels)
-
         # If there is not doc title - continue
         if doc_title == '':
             continue
@@ -149,22 +142,22 @@ def classify_dataset(dataset: str, save_path: pathlib.Path, nlp, lex_probability
 
         # Get the results of proximation and add to used tokens
         pov_change, verb_tense_change, passive_active_sub, \
-        reg_prox_used, sim_prox_used = classify_proximation(reg_doc, sim_doc, lang)
+            reg_prox_used, sim_prox_used = classify_proximation(reg_doc, sim_doc, lang)
         reg_used += reg_prox_used
         sim_used += sim_prox_used
 
         # Get the results of rephrasing
         simple_synonym, word2phrase, phrase2word, \
-        phrase2phrase, source_used, target_used = classify_rephrasing(reg_doc, sim_doc, lang, ppdb, reg_labels)
+            phrase2phrase, source_used, target_used = classify_rephrasing(reg_doc, sim_doc, lang, ppdb, reg_labels)
 
         # Get the results of deleting
         deleting_info, removal, summarization, \
-        percent_deleted_unused, token_length_ratio = classify_deleting_info(reg_doc, sim_doc, lang, entry_type,
-                                                                            reg_labels, reg_used)
+            percent_deleted_unused, token_length_ratio = classify_deleting_info(reg_doc, sim_doc, lang, entry_type,
+                                                                                reg_labels, reg_used)
         # Get the results of adding
         is_adding, examples, \
-        explanations, percent_added_unused = classify_adding_info(reg_doc, sim_doc, lang,
-                                                                  entry_type, sim_labels, sim_used)
+            explanations, percent_added_unused = classify_adding_info(reg_doc, sim_doc, lang,
+                                                                      entry_type, sim_labels, sim_used)
 
         # ￿Get the results of exlicitation
         pron_explicitation = classify_explicitation(reg_doc, sim_doc, lang, nlp, entry_type)
@@ -195,7 +188,6 @@ def classify_dataset(dataset: str, save_path: pathlib.Path, nlp, lex_probability
                                      deptree_depth_ratio, deptree_type, reg_depth, sim_depth
                                      )
                        )
-        # print(records)
     # create new dataframe from records
     LOGGER.warning("Creating new DF...")
     new_df = pd.DataFrame.from_records(records)
@@ -204,17 +196,17 @@ def classify_dataset(dataset: str, save_path: pathlib.Path, nlp, lex_probability
     LOGGER.warning("DONE")
 
 
-if __name__ == "__main__":  # TODO: Cleanup comment outs
+if __name__ == "__main__":  # TO-DO: Cleanup comment outs
 
     parser = argparse.ArgumentParser("Create CSVs with all the additional metrics and values added for each entry.\n"
-                                     "Expect datasets to have the columns: \'doc_title\', \'alignment\', "
+                                     "Expect Input datasets to have the columns: \'doc_title\', \'alignment\', "
                                      "\'entry_type\', \'reg_sent\', \'sim_sent\', \'TER_score\', "
                                      "\'reg_word_label_counts\',\'sim_word_label_counts\', "
                                      "\'reg_auto_labels\',\'sim_auto_labels\'\n")
     parser.add_argument('--ppdb_path', type=str, required=True, help="Directory where the simple paraphrase "
                                                                      "database is save.")
     parser.add_argument('--spacy_model', type=str, default="en_core_web_lg", help="Spacy Model name to load")
-    parser.add_argument('--lang', type=str, default='en')  # TODO: Cleanup usage of the lang argument
+    parser.add_argument('--lang', type=str, default='en')  # TO-DO: Cleanup usage of the lang argument
     parser.add_argument('--dataset_type', type=str, default='+actions+word_level')
     parser.add_argument('--output_path', type=str, required=True, help="Output directory")
     parser.add_argument('--output_type', required=True, default="both", choices=['both', 'txt', 'json'])
@@ -226,15 +218,12 @@ if __name__ == "__main__":  # TODO: Cleanup comment outs
 
     #  TO_DO: get correct SPPDB file
     LOGGER.warning("Loading PPDB...")
-    # ppdb_path = '/Users/eytan.chamovitz/PycharmProjects/NLP_HW/project/DHLS/SPPDB_lexicon.json'
-    # ppdb_path = "/Users/eytan.chamovitz/PycharmProjects/CogSimp/simple_ppdbs/en_sppdb.json"
 
     with open(args.ppdb_path, 'r') as f:
         ppdb = json.load(f)
 
-    # TODO: Think of ways to read word levels according to the tokenizing model
+    # TO-DO: Think of ways to read word levels according to the tokenizing model
     LOGGER.warning("Loading Spacy model...")
-    # nlp = spacy.load("en_core_web_lg")
     nlp = spacy.load(args.spacy_model)  # defaults to en_core_web_lg
     nlp.add_pipe('coreferee')
 
@@ -244,28 +233,8 @@ if __name__ == "__main__":  # TODO: Cleanup comment outs
     else:
         lex_probability = {}
 
-    # TO_DO: ADD tokens for classification
-    # dataset_name = "disability_fest_manual"
-    # data_path = pathlib.Path("/Users/eytan.chamovitz/PycharmProjects/CogSimp/csvs")
     data_path = pathlib.Path(args.output_path)
-    # types = ["dev", "test", "train"]
-    # levels = ["lvl1", "lvl2", "lvl3", "lvl4", "all"]
-    # newsela = [f"newsela-manual-{t}-{l}" for t in types for l in levels]
-    # wiki = [f"wiki-manual-{t}" for t in types]
-    # datasets = newsela + wiki
-    # datasets = [
-    #     # 'newsela-manual-dev-lvl1', 'newsela-manual-dev-lvl2', 'newsela-manual-dev-lvl3', 'newsela-manual-dev-lvl4',
-    #     # 'newsela-manual-dev-all',
-    #     # 'newsela-manual-test-lvl1', 'newsela-manual-test-lvl2', 'newsela-manual-test-lvl3',
-    #     # 'newsela-manual-test-lvl4', 'newsela-manual-test-all',
-    #     # 'newsela-manual-train-lvl1', 'newsela-manual-train-lvl2',
-    #     # 'newsela-manual-train-lvl3', 'newsela-manual-train-lvl4', 'newsela-manual-train-all',
-    #     'wiki-manual-dev', 'wiki-manual-test', 'wiki-manual-train'
-    # ]
 
     for dataset_name in args.datasets:
-        # (dataset, save_path, nlp, lex_probability, ppdb,
-        #  dataset_type="+actions+word_level", sep=';',
-        #  source_folder="/Users/eytan.chamovitz/PycharmProjects/AutoLingSimp")
         classify_dataset(dataset_name, data_path, nlp, lex_probability, ppdb, dataset_type=args.dataset_type,
                          sep=args.sep, lang=args.lang, source_folder=args.source_folder)
