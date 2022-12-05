@@ -176,7 +176,7 @@ def create_wordlevel_datasets(path, ds_name, input=None, lang="en"):
         res = get_word_level(orig_tokenized, orig_parses, simp_tokenized, simp_parses, word_aligner, index=len(orig_tokenized))
         print("Concating and Saving dataframe")
         pd.concat([df, res], axis=1).to_csv(
-            f"{path}/{ds_name}+actions+word_level.csv")
+            f"{path}/{ds_name}+actions+word_level.csv", encoding='utf-8', sep=';')
 
 
 if __name__ == "__main__":  # TO_DO: Cleanup comment outs
@@ -206,5 +206,6 @@ if __name__ == "__main__":  # TO_DO: Cleanup comment outs
         r = read_files(args.reg_file, args.sim_file)
         df = pd.DataFrame(r)
         df.to_csv(input_file, sep=";")
+        args.input_file = None
 
-    create_wordlevel_datasets(args.data_path, args.dataset_name, input=args.input_file)
+    create_wordlevel_datasets(args.data_path, args.dataset_name, args.input_file)
