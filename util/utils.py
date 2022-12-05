@@ -36,18 +36,7 @@ def get_reorder_sent_id(idx_list: List):
         parent = parent_list[parent]
     result = list(
         np.arange(len(idx_list))[np.logical_not(is_correct_order)])  # convert to list all idxs that are not in order
-    # return list(filter(lambda a: a != 2, result))
     return result
-
-
-# def LISKE(idx_list: List[int], k: int):
-#     """
-#     Implements the Longest
-#     :param idx_list: list of sentence indexes to find longest increasing subsequence in
-#     :param k: number of exceptions
-#     :return:
-#     """
-#     dp = np.zeros((len(idx_list), k))
 
 
 def LIS(idx_list: List[int]):
