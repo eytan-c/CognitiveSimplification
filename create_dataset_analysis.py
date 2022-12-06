@@ -5,9 +5,9 @@ from annotate_dataset.ops_classify_decisions import *
 import pandas as pd
 import logging
 
-# TODO: Add usage description
-# TODO: Clean-up comment outs
-# TODO: Add different file saving types
+# TO-DO: Add usage description
+# TO-DO: Clean-up comment outs
+# TO-DO: Add different file saving types
 
 """
     Sorting fields:
@@ -140,15 +140,24 @@ def dataset_analysis(ds_name: str, data_path: str, out_path: str):
 
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser("Analyze simplification datasets with regards to use of Cognitive Simplification Operations.\n"
+                                     "Outputs 3 types of files:\n"
+                                     "\t1. <dataset_name>-ops.csv : a CSV that saves which operations are used in which SI in the dataset.\n"
+                                     "\t2. <ds_name>__analysis.txt : a text output of the full analysis.\n"
+                                     "\t3. <ds_name>-<full|entry|no-5-6>-analysis.csv : files that save the statistics for each operation in different ways.\n")
+    parser.add_argument("--datapath", default="./data/base_datasets")
+    parser.add_argument("--outpath", default="./data/dataset_analysis")
+
+    args = parser.parse_args()
+
     setup_logging("test")
 
     logger = logging.getLogger()
 
-    logger.info("This is a test")
-    datapath = pathlib.Path("/Users/eytan.chamovitz/PycharmProjects/CogSimp/csvs")
-    # datapath = pathlib.Path("/Users/eytan.chamovitz/PycharmProjects/CogSimp/csvs/uncrpd")
-    # datapath = pathlib.Path("/Users/eytan.chamovitz/PycharmProjects/CogSimp/csvs/wiki-auto")
-    outpath = "/Users/eytan.chamovitz/PycharmProjects/CogSimp/dataset_analysis"
+    datapath = pathlib.Path(args.datapath)
+    outpath = pathlib.Path(args.outpath)
+
     for file in datapath.iterdir():
         if file.is_dir() or file.stem.startswith("."):
             continue
