@@ -10,7 +10,7 @@ This work is licensed under a
 [cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
 [cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg
 
-This is the respective repository of Paper: [Cognitive Simplification Operations Improve Text Simplification](). It includes the code used in the paper, as well as access to the FestAbility dataset, also accessible on [huggingface datasets](https://huggingface.co/datasets/eytanc/FestAbilityTranscripts).
+This is the respective repository of Paper: [Cognitive Simplification Operations Improve Text Simplification](https://arxiv.org/abs/2211.08825). It includes the code used in the paper, as well as access to the FestAbility dataset, also accessible on [huggingface datasets](https://huggingface.co/datasets/eytanc/FestAbilityTranscripts).
 
 There are three main sections for this repository:
 1. Annotate a new dataset with Cognitive Simplification Operations, as detailed in the paper.
@@ -36,8 +36,9 @@ To evaluate a saved finetuned model on the ASSET dataset (Alva-Manchego et al. 2
 All possible arguments are accessed via `--help`.
 
 # Running a dataset analysis on new annotated datasets
- By running [create_dataset_analysis.py](create_dataset_analysis.py), you will create files in the correct format to be analyzed by [compare_datasets.py](compare_datasets.py). 
- The input for [create_dataset_analysis.py](create_dataset_analysis.py) is expected to be in the format as outputed by the annotation pipeline.
+ By running [create_dataset_analysis.py](create_dataset_analysis.py), you will create files in the correct format to be analyzed by [compare_datasets.py](compare_datasets.py), as well as aggregate statistics on the usage of the operations in the analyzed dataset. 
  
- By default, [compare_datasets.py](compare_datasets.py) compares all existing data in the [data/csvs/dataset_analysis](data/csvs/dataset_analysis) folder. This can be modified via cmd line arguments.
+ The input for [create_dataset_analysis.py](create_dataset_analysis.py) is expected to be in the format as that is outputed by the annotation pipeline. Place any file to be read by [create_dataset_analysis.py](create_dataset_analysis.py) in the [data/basedatasets](data/base_datasets) folder. Otherwise, use the cmd line arguments to point to the correct folder that contains the files.
+ 
+ By default, [compare_datasets.py](compare_datasets.py) compares all existing data in the [data/dataset_analysis/csvs](data/dataset_analysis/csvs) folder. This can be modified via cmd line arguments.
 

@@ -1,10 +1,13 @@
 import os
 import time
 
-from annotate_dataset.asset_actions import get_tokenized_and_parsing_from_list, get_word_level
 import pyter
 from annotate_dataset.classify_datasets import *
 from easse.aligner.aligner import MonolingualWordAligner, STANFORD_CORENLP_DIR, download_stanford_corenlp, CoreNLPClient
+import easse.annotation.word_level as wl
+from easse.aligner.corenlp_utils import format_parser_output, join_parse_result, split_parse_result
+from annotate_dataset.ops_classify_decisions import row_to_json
+from annotate_dataset.analyze_ops import *
 
 from typing import Dict, List, Tuple, Union
 
@@ -46,6 +49,54 @@ def split_sentences(line) -> List[str]:
         return []
     else:
         return s
+
+
+def get_tokenized_and_parsing_from_list(sent_list, nlp, nlpclient):
+    print("Tokenizing...")
+    tokenized = [" ".join(token.text for token in nlp(sent.strip())) for sent in sent_list]
+
+    print("Syntactic Parsing...")
+    parses = syntactic_parse_texts(tokenized, verbose=True, client=nlpclient)
+    return tokenized, parses
+
+
+def get_word_level(reg_tokenized, reg_parses, sim_tokenized, sim_parses, aligner: MonolingualWordAligner, index=None):
+    result = []
+    for ind, reg_sent_tok, sim_sent_tok, orig_p, ref_p in tqdm(zip(range(index-len(reg_tokenized), index), reg_tokenized, sim_tokenized, reg_parses, sim_parses),
+                                                                 total=len(reg_tokenized)):
+        reg_count = {}
+        sim_count = {}
+        reg_auto_labels = []
+        sim_auto_labels = []
+        try:
+            word_align = aligner.get_word_aligns(orig_p, ref_p)[0]
+            reg_annots, sim_annots = annotate_sentence(reg_sent_tok.split(), sim_sent_tok.split(),
+                                                       word_align, orig_p, ref_p)
+            reg_auto_labels = wl._from_annots_to_labels(reg_annots, ORIG_OPS_LABELS, 'C')
+            sim_auto_labels = wl._from_annots_to_labels(sim_annots, ['A', 'D', 'M', 'R', 'C'], 'C')
+            reg_count = dict(Counter(reg_auto_labels).items())
+            sim_count = dict(Counter(sim_auto_labels).items())
+        except IndexError:
+            if len(reg_sent_tok) == 0:
+                reg_count = {}
+                sim_count = {'A': len(sim_sent_tok.split())}
+                reg_auto_labels = []
+                sim_auto_labels = ['A' for word in sim_sent_tok.split()]
+            elif len(sim_sent_tok) == 0:
+                reg_count = {'D': len(reg_sent_tok.split())}
+                sim_count = {}
+                reg_auto_labels = ['D' for word in reg_sent_tok.split()]
+                sim_auto_labels = []
+        except TimeoutError:
+            reg_count = {}
+            sim_count = {}
+            reg_auto_labels = []
+            sim_auto_labels = []
+            print(f"TimeoutError in line {ind}")
+        finally:
+            result.append((reg_count, sim_count, reg_auto_labels, sim_auto_labels))
+    return pd.DataFrame(result, columns=["reg_word_label_counts", "sim_word_label_counts", "reg_auto_labels",
+                                         "sim_auto_labels"])
 
 
 def read_files(regular_file: Union[str, pathlib.Path], simple_file: Union[str, pathlib.Path]) -> List[Dict[str, Union[str, int]]]:
