@@ -111,6 +111,8 @@ def dataset_analysis(ds_name: str, data_path: str, out_path: str):
     logger.info("Creating Operations dataframe")
     ops_decide_df = df.apply(get_decision_dict, axis=1)
     ops_decide_df = pd.concat([df["entry_type_num"], ops_decide_df], axis=1)
+    logger.info("Fixing ADD classification errors in DELETE alignments")
+    ops_decide_df["ADD"][ops_decide_df["entry_type_num"] == 5] = 0
     logger.info("Saving Operations dataframe")
     ops_decide_df.to_csv(f"{outpath}/csvs/{ds_name}-ops.csv", sep=";")
     logger.info("Starting full corpus analysis")
