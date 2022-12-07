@@ -40,5 +40,6 @@ All possible arguments are accessed via `--help`.
  
  The input for [create_dataset_analysis.py](create_dataset_analysis.py) is expected to be in the format as that is outputed by the annotation pipeline. Place any file to be read by [create_dataset_analysis.py](create_dataset_analysis.py) in the [data/basedatasets](data/base_datasets) folder. Otherwise, use the cmd line arguments to point to the correct folder that contains the files.
  
- By default, [compare_datasets.py](compare_datasets.py) compares all existing data in the [data/dataset_analysis/csvs](data/dataset_analysis/csvs) folder. This can be modified via cmd line arguments.
+ By default, [compare_datasets.py](compare_datasets.py) compares all existing data in the [data/dataset_analysis/csvs](data/dataset_analysis/csvs) folder. 
+ To add your new dataset to this analysis, you need to modify the _DS_GROUPS, _DS_REMAP, _DS_REMAP_SHORT, _DS_ORDER, _DS_ORDER_SHORT, _DS_COLOR_MAP variable in the [compare_datasets.py](compare_datasets.py) file. Command line arguments affect the type of analysis that is calculated.
 
