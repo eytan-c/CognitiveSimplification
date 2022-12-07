@@ -1,3 +1,4 @@
+import argparse
 import math
 from matplotlib.colors import ListedColormap
 from matplotlib.gridspec import GridSpec
@@ -141,7 +142,7 @@ def series_norm(s, t, order=2):
     return sum(result) / l
 
 
-def show_action_histograms(datapath: pathlib.Path, analysis_type="full", title="Action_frequencies"):
+def show_action_histograms(datapath: pathlib.Path, analysis_type="full", title="Action_frequencies", save_fig=False):
     distributions = {}
     actions = {}
     if analysis_type == "drop":
@@ -167,22 +168,16 @@ def show_action_histograms(datapath: pathlib.Path, analysis_type="full", title="
     grid = GridSpec(4, 3, figure=fig, height_ratios=[1, 1, 1, 1])
     for i in range(4):
         for j in range(3):
-            # if i == 2 and j > 0:
-            #     break
             if i != 0 or j != 0:
                 fig.add_subplot(grid[i, j], sharex=fig.axes[0])
             else:
                 fig.add_subplot(grid[i, j])
 
-    # fig.add_subplot(grid[2, 1:])
-    # plt.show()
     axs = fig.axes
-    col=0
+    col = 0
     for ds in [_DS_REMAP[k] for k in actions.keys()]:
         g = sn.histplot(act_df[act_df["dataset"] == ds]["number"],ax=axs[col],bins=7)
-        # g.legend_.remove()
         g.set(xlabel=None, ylabel=None)
-        # g.tick_params(bottom=False)
         if ds.startswith("Newsela"):
             g.set(title=f"NewselaM {ds.split(' ')[1]}")
         elif ds.startswith("WikiM"):
@@ -190,9 +185,12 @@ def show_action_histograms(datapath: pathlib.Path, analysis_type="full", title="
         else:
             g.set(title=ds)
         col+=1
-    # axs[-1].axis("off")
-    # plt.savefig(f"{title}_histograms", bbox_inches="tight")
-    plt.show(bbox_inches="tight")
+    plt.suptitle("Number of actions per SI")
+    if save_fig:
+        plt.savefig(f"{title}_histograms", bbox_inches="tight")
+    else:
+        plt.show(bbox_inches="tight")
+
     plt.clf()
     plt.cla()
     fig = plt.figure(figsize=set_size(text_width, subplots=(5, 3)))
@@ -204,9 +202,8 @@ def show_action_histograms(datapath: pathlib.Path, analysis_type="full", title="
     fig.add_subplot(grid[3, :])
     axs = fig.axes
     row, col = 0, 0
-    # g = sn.catplot(x="action", y="prob", hue="action",data=dist_df,col="dataset")
-    # plt.show()
-    # clrs = ["green", "blue","blue","blue", "red","red","red","red","red","red","red"]
+
+    #  Color blind colors
     clrs = [sn.color_palette("Oranges",3)[1],
             sn.color_palette("Oranges", 3)[2],
             sn.color_palette("Blues",3)[0],
@@ -221,31 +218,17 @@ def show_action_histograms(datapath: pathlib.Path, analysis_type="full", title="
             sn.color_palette("Greens",8)[7],
             ]
     clrs = ['#999999', '#777777', '#BA8DB4', '#AA6F9E', '#994F88', '#1965B0', '#437DBF', '#6195CF', '#7BAFDE', '#4EB265', '#90C987', '#CAE0AB']
+
     for act in _ACTION_COLUMNS:
-        # g = sn.barplot(x="action", y="prob", hue="dataset", data=dist_df[dist_df["action"] == act], ax=axs[row][col])
         g = sn.barplot(x="action", y="prob", hue="dataset", palette=clrs,
                        data=dist_df[dist_df["action"] == act], ax=axs[col])
         g.legend_.remove()
         g.set(xlabel=None, ylabel=None)
         g.tick_params(bottom=False)
         col += 1
-        if act == "REPHRASE":
-            g.set_ylim(0.7, 1)
-        # col = col % 2
-        # if col == 0:
-        #     row += 1
-    # for ds in set(dist_df["dataset"]):
-    #     g = sn.barplot(x="dataset", y="prob", hue="action",
-    #                    data=dist_df[dist_df["dataset"] == ds], ax=axs[col])
-    #     g.legend_.remove()
-    #     g.set(xlabel=None, ylabel=None)
-    #     g.tick_params(bottom=False)
-    #     col += 1
-    #     # if act == "REPHRASE":
-    #     #     g.set_ylim(0.7, 1)
-    #     # col = col % 2
-    #     # if col == 0:
-    #     #     row += 1
+        # if act == "REPHRASE":
+        #     g.set_ylim(0.7, 1)
+
     h, l = axs[0].get_legend_handles_labels()
     axs[-1].legend(h, l, ncol=3, loc="upper center", fontsize="x-small")
     axs[-1].set(xticklabels=[], yticklabels=[], xlabel=None, ylabel=None)
@@ -253,15 +236,15 @@ def show_action_histograms(datapath: pathlib.Path, analysis_type="full", title="
     axs[-1].set_frame_on(False)
     # g = sn.catplot(x="dataset", y="prob", hue="dataset", col="action", data=dist_df)
     # plt.title(title)
-    # plt.suptitle("Simplification Operation Probabilities")
-    # plt.savefig(f"{title}_per_Actions", bbox_inches='tight')
-    plt.show(bbox_inches='tight')
-
-    print()
+    plt.suptitle("Simplification Operation Probabilities")
+    if save_fig:
+        plt.savefig(f"{title}_per_Actions", bbox_inches='tight')
+    else:
+        plt.show(bbox_inches='tight')
 
 
 def show_action_distribution_distances(datapath: pathlib.Path, distance_func=mean_pointwise_jsd, analysis_type="full",
-                                       add_point_labels=False, annotate_hm=False,
+                                       add_point_labels=False, annotate_hm=False, save_fig=False,
                                        title="JSD_action_distances"):
     distributions = {}
     if analysis_type == "drop":
@@ -318,8 +301,10 @@ def show_action_distribution_distances(datapath: pathlib.Path, distance_func=mea
                 if s != 0:
                     g.text(x=x + o[0], y=y + o[1], s=f"{s:.3f}")
         plt.title(f"Full Corpus Operation Probabilities PCA")
-    # plt.savefig(f"{title}_pca", bbox_inches='tight')
-    plt.show(bbox_inches='tight')
+    if save_fig:
+        plt.savefig(f"{title}_pca", bbox_inches='tight')
+    else:
+        plt.show(bbox_inches='tight')
 
     dist_df = dist_df.rename(columns=_DS_REMAP_SHORT, index=_DS_REMAP_SHORT)
     dist_df = dist_df.reindex(columns=_DS_ORDER_SHORT, index=_DS_ORDER_SHORT)
@@ -343,21 +328,30 @@ def show_action_distribution_distances(datapath: pathlib.Path, distance_func=mea
     # sn.clustermap(dist_df, row_cluster=False)
     # plt.title(title, fontsize=15)
 
-    print(f"{title}: max - {dist_df.max().max():.3f}, min - {dist_df.min().min():.3f}")
-    # plt.savefig(f"{title}.png", bbox_inches='tight')
+    # print(f"{title}: max - {dist_df.max().max():.3f}, min - {dist_df.min().min():.3f}")
     plt.title(title)
-    plt.show(bbox_inches='tight')
+    if save_fig:
+        plt.savefig(f"{title}.png", bbox_inches='tight')
+    else:
+        plt.show(bbox_inches='tight')
 
 
-def show_dist_and_corr_together(datapath: pathlib.Path, distance_func=mean_pointwise_jsd):
+def show_dist_and_corr_together(datapath: pathlib.Path, analysis_type="full",
+                                distance_func=mean_pointwise_jsd, save_fig=False):
     distributions = {}
     cors = {}
     for file in tqdm.tqdm(sorted(datapath.iterdir())):
         if file.is_file() and "-ops" in file.stem and file.suffix == ".csv":
             ds_name = file.stem.split("+")[0]
             df = pd.read_csv(file, sep=';')
-            distributions[ds_name] = df[_ACTION_COLUMNS].mean()
-            cors[ds_name] = df[_ACTION_COLUMNS].corr()
+            if analysis_type == "drop":
+                distributions[ds_name] = df[df["entry_type_num"] <= 4][_ACTION_COLUMNS].mean()
+            else:
+                distributions[ds_name] = df[_ACTION_COLUMNS].mean()
+            if analysis_type == "drop":
+                cors[ds_name] = df[df["entry_type_num"] <= 4][_ACTION_COLUMNS].corr()
+            else:
+                cors[ds_name] = df[_ACTION_COLUMNS].corr()
     distances = {s: {d: distance_func(distributions[s], distributions[d]) for d in distributions.keys()} for s in
                  distributions.keys()}
     cor_distances = {s: {d: np.linalg.norm(cors[s] - cors[d]) for d in cors.keys()} for s in cors.keys()}
@@ -385,11 +379,18 @@ def show_dist_and_corr_together(datapath: pathlib.Path, distance_func=mean_point
     ax1.set_xticklabels(ax1.get_xticklabels(), rotation=45, rotation_mode='anchor', ha='right')
     ax2.set_xticklabels(ax2.get_xticklabels(), rotation=45, rotation_mode='anchor', ha='right')
     ax2.yaxis.set_visible(False)
-    plt.show()
+    ax1.set_title(f"{distance_func.__name__}", fontsize=8)
+    ax2.set_title("correlation matrix $\ell_2$-distance", fontsize=8)
+    plt.suptitle("Distances between datasets")
+
+    if save_fig:
+        plt.savefig(f"distances_and_correlations", bbox_inches='tight')
+    else:
+        plt.show(bbox_inches='tight')
 
 
 def show_correlation_distances(datapath: pathlib.Path, analysis_type="full", title="correlation_matrix_distances",
-                               annotate_hm=False):
+                               annotate_hm=False, save_fig=False):
     cors = {}
     if analysis_type == "drop":
         title = f"{title}_drop"
@@ -427,8 +428,11 @@ def show_correlation_distances(datapath: pathlib.Path, analysis_type="full", tit
         plt.title(f"Fine Tuning Correlation Matrices PCA")
     else:
         plt.title(f"Full Corpus Correlation Matrices PCA")
-    # plt.savefig(f"{title}_pca", bbox_inches='tight')
-    plt.show(bbox_inches='tight')
+
+    if save_fig:
+        plt.savefig(f"{title}_pca", bbox_inches='tight')
+    else:
+        plt.show(bbox_inches='tight')
 
     dist_df = dist_df.rename(columns=_DS_REMAP_SHORT, index=_DS_REMAP_SHORT)
     dist_df = dist_df.reindex(columns=_DS_ORDER_SHORT, index=_DS_ORDER_SHORT)
@@ -447,12 +451,14 @@ def show_correlation_distances(datapath: pathlib.Path, analysis_type="full", tit
     # sn.clustermap(dist_df, row_cluster=False)
     # plt.title("Operation Correlation Matrix distances", fontsize=15)
     # print(f"{title}: max - {dist_df.max().max():.3f}, min - {dist_df.min().min():.3f}")
-    # plt.savefig(f"{title}.png", bbox_inches='tight')
     plt.title(title)
-    plt.show(bbox_inches='tight')
+    if save_fig:
+        plt.savefig(f"{title}.png", bbox_inches='tight')
+    else:
+        plt.show(bbox_inches='tight')
 
 
-def show_all_action_correlations(datapath: pathlib.Path):
+def show_all_action_correlations(datapath: pathlib.Path, save_fig=False):
     count_of_ops_files = 0
     for file in datapath.iterdir():
         if file.is_file() and "-ops" in file.stem and file.suffix == ".csv":
@@ -490,7 +496,12 @@ def show_all_action_correlations(datapath: pathlib.Path):
         fig.colorbar(axs[2][0].collections[0], cax=axs[plt_row][plt_col])
         for label in axs[plt_row][plt_col].get_yticklabels():
             label.set_fontsize(8)
-    plt.show(bbox_inches="tight")
+    plt.suptitle("Action Correlation Matrices")
+    if save_fig:
+        plt.savefig("all_action_correlations", bbox_inches="tight")
+    else:
+        plt.show(bbox_inches="tight")
+    print()
 
 
 def process_df(file):
@@ -511,7 +522,7 @@ def get_joined_metrics(datapath: pathlib.Path, analysis_type: str = "-full"):
     return pd.concat([df[0] for df in dfs], keys=[df[1] for df in dfs], ignore_index=True)
 
 
-def show_metric_calculations(data_frame: pd.DataFrame, metric_names: List[str], calc="mean"):
+def show_metric_calculations(data_frame: pd.DataFrame, metric_names: List[str], calc="mean", save_fig=False):
     max_rows = 2
     max_cols = math.ceil(len(metric_names) / 2)
     plt.cla()
@@ -520,7 +531,7 @@ def show_metric_calculations(data_frame: pd.DataFrame, metric_names: List[str], 
     row, col = 0, 0
     for metric in metric_names:
         sn.barplot(data=data_frame[data_frame["metric"] == metric],
-                   order=sorted(set(data_frame["dataset"])),
+                   order=sorted(set(data_frame["dataset"]), key=lambda ds: _DS_ORDER_SHORT.index(ds)),
                    x="dataset",
                    # hue="dataset",
                    y=calc, ax=axs[row][col])
@@ -533,17 +544,20 @@ def show_metric_calculations(data_frame: pd.DataFrame, metric_names: List[str], 
         # if row == 0 and col == 0:
         # axs[row][col].legend()
         else:
-            axs[row][col].set_xticklabels(sorted(set(data_frame["dataset"])), rotation=45)
+            # sorted(distributions.items(), key=lambda pair: _DS_ORDER.index(_DS_REMAP[pair[0]]))
+            axs[row][col].set_xticklabels(sorted(set(data_frame["dataset"]), key=lambda ds: _DS_ORDER_SHORT.index(ds)), rotation=45)
             axs[row][col].set(xlabel=None, ylabel=None)
             axs[row][col].tick_params(labelrotation=90)
-        axs[row][col].set_title(f"{calc.capitalize()} {metric}")
+        axs[row][col].set_title(f"{metric}", fontsize=9)
         col += 1
         col = col % max_cols
         if col == 0:
             row += 1
         if row > max_rows - 1:
             break
+    plt.suptitle(f"{calc.capitalize()} values of metrics")
     plt.show()
+    print()
 
 
 def get_align_densities(dataframe: pd.DataFrame):
@@ -612,73 +626,76 @@ def show_align_distances(datapath: pathlib.Path, group_datasets=False):
     print()
 
 
-def fix_add_del(datapath: pathlib.Path):
-    for file in tqdm.tqdm(sorted(datapath.iterdir())):
-        if file.is_file() and "-ops" in file.stem and file.suffix == ".csv":
-            ds_name = file.stem.split("+")[0]
-            df = pd.read_csv(file, sep=';')
-            df["ADD"][df["entry_type_num"] == 5] = 0
-            df.to_csv(f"{data_path}/{file.stem}+fixed.csv", sep=';')
+# def fix_add_del(datapath: pathlib.Path):  # TO-DO: Remove - fixed in pipeline
+#     for file in tqdm.tqdm(sorted(datapath.iterdir())):
+#         if file.is_file() and "-ops" in file.stem and file.suffix == ".csv":
+#             ds_name = file.stem.split("+")[0]
+#             df = pd.read_csv(file, sep=';')
+#             df["ADD"][df["entry_type_num"] == 5] = 0
+#             df.to_csv(f"{data_path}/{file.stem}+fixed.csv", sep=';')
 
 
 if __name__ == '__main__':
-    data_path = pathlib.Path("/Users/eytan.chamovitz/PycharmProjects/CogSimp/dataset_analysis/csvs")
-    # p1 = data_path / "disability_fest_manual+revised-ops.csv"
-    # p2 = data_path / "newsela-manual-dev-all+revised-ops.csv"
-    #
-    # df1 = pd.read_csv(p1, sep=';')
-    # df2 = pd.read_csv(p2, sep=';')
 
-    # show_dist_and_corr_together(data_path)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_path", default="./data/dataset_analysis/csvs")
+    subparsers = parser.add_subparsers(dest="analyses_to_perform")
+    all_parser = subparsers.add_parser("all", aliases=["a"], help="Perform all analyses")
+    set_option_parser = subparsers.add_parser("set", aliases=["s"])
+    set_option_parser.add_argument("--distances_and_correlations", "-dc", action='store_true')
+    set_option_parser.add_argument("--histograms", "-hs", action='store_true')
+    set_option_parser.add_argument("--distances", "-d", action='store_true')
+    set_option_parser.add_argument("--correlation_distances", "-c", action='store_true')
+    set_option_parser.add_argument("--metrics", "-m", action='store_true')
+    set_option_parser.add_argument("--action_correlations", "-ac", action='store_true')
+    set_option_parser.add_argument("--correlation_matrices", "-cm", action='store_true')
+    parser.add_argument("--analysis_type", "-at", choices=["full","drop"], default="full")
+    parser.add_argument("--save_fig", action="store_true")
 
-    # fix_add_del(data_path / "fixing ops")
+    args = parser.parse_args()
 
-    # show_action_distribution_distances(data_path)
-    # show_action_distribution_distances(data_path, series_norm, title="NORM_action_distances")
-    # show_action_distribution_distances(data_path, analysis_type="drop")
-    # show_action_distribution_distances(data_path, series_norm, title="NORM_action_distances", analysis_type="drop")
+    if args.analyses_to_perform is None or args.analyses_to_perform == "all":
+        args.distances_and_correlations = True
+        args.histograms = True
+        args.distances = True
+        args.correlation_distances = True
+        args.metrics = True
+        args.action_correlations = True
+        args.correlation_matrices = True
 
-    show_action_histograms(data_path / "fixing ops", analysis_type="drop")
+    data_path = pathlib.Path(args.data_path)
 
-    show_action_distribution_distances(data_path / "fixing ops", title="JSD_action_distances_fixed", annotate_hm=True)
-    # show_action_distribution_distances(data_path / "fixing ops", series_norm, title="NORM_action_distances_fixed", annotate_hm=True)
-    # show_action_distribution_distances(data_path / "fixing ops", series_norm, title="SUM_JSD_action_distances_fixed", annotate_hm=True)
-    show_action_distribution_distances(data_path / "fixing ops", title="JSD_action_distances_fixed",
-                                       analysis_type="drop", annotate_hm=True)
-    # show_action_distribution_distances(data_path / "fixing ops", series_norm, title="NORM_action_distances_fixed", analysis_type="drop", annotate_hm=True)
-    # show_action_distribution_distances(data_path / "fixing ops", sum_pointwise_jsd, title="SUM_JSD_action_distances_fixed", analysis_type="drop", annotate_hm=True)
+    if args.distances_and_correlations:
+        show_dist_and_corr_together(data_path, analysis_type=args.analysis_type, save_fig=args.save_fig)
 
-    # show_correlation_distances(data_path)
-    # show_correlation_distances(data_path, analysis_type="drop")
+    if args.histograms:
+        show_action_histograms(data_path, analysis_type=args.analysis_type, save_fig=args.save_fig)
 
-    show_correlation_distances(data_path / "fixing ops", title="correlation_matrix_distances_fixed", annotate_hm=True)
-    show_correlation_distances(data_path / "fixing ops", title="correlation_matrix_distances_fixed",
-                               analysis_type="drop", annotate_hm=True)
+    if args.distances:
+        show_action_distribution_distances(data_path, title="JSD_action_distances", save_fig=args.save_fig,
+                                           annotate_hm=True, analysis_type=args.analysis_type)
+
+    # TO-DO: maybe re-add other metrics
+    # show_action_distribution_distances(data_path, series_norm, title="NORM_action_distances_fixed", analysis_type="drop", annotate_hm=True)
+    # show_action_distribution_distances(data_path, sum_pointwise_jsd, title="SUM_JSD_action_distances_fixed", analysis_type="drop", annotate_hm=True)
+
+    if args.correlation_distances:
+        show_correlation_distances(data_path, title="correlation_matrix_distances_fixed", save_fig=args.save_fig,
+                                   analysis_type=args.analysis_type, annotate_hm=True)
+
 
     # show_align_distances(data_path)
-    show_align_distances(data_path, group_datasets=True)
+    # show_align_distances(data_path, group_datasets=True)
 
-    cc = get_joined_metrics(data_path, "-no-5-6")
-    # print(cc)
-    # show_metric_calculations(cc, _NUMERIC)
-    # show_metric_calculations(cc, _PARAPHRASE)
-    # show_metric_calculations(cc, _OTHER)
-    # show_metric_calculations(cc, _NUMERIC, calc="median")
-    # show_metric_calculations(cc, _PARAPHRASE, calc="median")
-    # show_metric_calculations(cc, _OTHER, calc="median")
+    if args.metrics:
+        cc = get_joined_metrics(data_path, "-no-5-6")
+        cc = cc.replace({"dataset": _DS_REMAP_SHORT})
+        # print(cc)
+        show_metric_calculations(cc, _NUMERIC)
+        # show_metric_calculations(cc, _PARAPHRASE)
+        # show_metric_calculations(cc, _OTHER)
 
-    # sn.barplot(x="dataset", y="mean", data=cc[cc["metric"] == "ter"])
-    # plt.xticks(rotation=45,
-    #            horizontalalignment='right'
-    #            )
-    # plt.show()
-    # g = sn.FacetGrid(cc[cc["metric"].isin(_NUMERIC)], row="metric")
-    # g.map(sn.barplot, "dataset", "mean")
-    # plt.xticks(rotation=45,
-    #            horizontalalignment='right'
-    #            )
-    # plt.show()
-
-    # show_all_action_correlations(data_path / "fixing ops")
+    if args.correlation_matrices:
+        show_all_action_correlations(data_path)
     # show_all_action_correlations(data_path / "newsela_levels")
     # show_all_action_correlations(data_path / "asset_annotators")
