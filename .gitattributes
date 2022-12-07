@@ -1,1 +1,5 @@
 simple_ppdbs/* filter=lfs diff=lfs merge=lfs -text
+data/wiki_auto-train.json filter=lfs diff=lfs merge=lfs -text
+data/dataset_analysis/csvs/wiki-manual-train+revised-ops.csv filter=lfs diff=lfs merge=lfs -text
+data/base_datasets/asset* filter=lfs diff=lfs merge=lfs -text
+data/dataset_analysis/wiki-manual* filter=lfs diff=lfs merge=lfs -text
