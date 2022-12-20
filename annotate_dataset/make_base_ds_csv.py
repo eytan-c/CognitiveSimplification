@@ -51,9 +51,75 @@ def split_sentences(line) -> List[str]:
         return s
 
 
+def syntactic_parse_texts(
+    texts: List[str],
+    tokenize=False,
+    sentence_split=False,
+    verbose=False,
+    with_constituency_parse=False,
+    client=None
+):
+    parse_results = []
+
+    if client is None:
+        corenlp_annotators = [
+            "tokenize",
+            "ssplit",
+            "pos",
+            "lemma",
+            "ner",
+            "depparse",
+        ]
+        if with_constituency_parse:
+            corenlp_annotators.append("parse")
+        annotators_properties = {
+            "tokenize.whitespace": not tokenize,
+            "ssplit.eolonly": not sentence_split,
+            "depparse.model": "edu/stanford/nlp/models/parser/nndep/english_SD.gz",
+            "outputFormat": "json",
+        }
+        if not STANFORD_CORENLP_DIR.exists():
+            download_stanford_corenlp()
+        os.environ["CORENLP_HOME"] = str(STANFORD_CORENLP_DIR)
+
+
+        with CoreNLPClient(
+            annotators=corenlp_annotators,
+            properties=annotators_properties,
+            threads=40, be_quiet=True
+        ) as client:
+            for text in tqdm(texts, disable=(not verbose)):
+                if isinstance(text, List):
+                    text = " ".join(text)
+                raw_parse_result = client.annotate(text)
+                parse_result = format_parser_output(raw_parse_result["sentences"])
+
+                if len(parse_result["sentences"]) > 1 and not sentence_split:
+                    parse_result = join_parse_result(parse_result)
+                elif sentence_split:
+                    parse_result = split_parse_result(parse_result["sentences"])
+
+                parse_results.append(parse_result)
+    else:
+        for text in tqdm(texts, disable=(not verbose)):
+            if isinstance(text, List):
+                text = " ".join(text)
+            raw_parse_result = client.annotate(text)
+            parse_result = format_parser_output(raw_parse_result["sentences"])
+
+            if len(parse_result["sentences"]) > 1 and not sentence_split:
+                parse_result = join_parse_result(parse_result)
+            elif sentence_split:
+                parse_result = split_parse_result(parse_result["sentences"])
+
+            parse_results.append(parse_result)
+
+    return parse_results
+
+
 def get_tokenized_and_parsing_from_list(sent_list, nlp, nlpclient):
     print("Tokenizing...")
-    tokenized = [" ".join(token.text for token in nlp(sent.strip())) for sent in sent_list]
+    tokenized = [" ".join(token.text for token in nlp(sent.strip())) for sent in tqdm(sent_list)]
 
     print("Syntactic Parsing...")
     parses = syntactic_parse_texts(tokenized, verbose=True, client=nlpclient)
