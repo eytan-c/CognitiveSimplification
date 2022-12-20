@@ -237,7 +237,7 @@ def get_TER_scores(reg_sents, sim_sents, nlp):
     return result
 
 
-def create_wordlevel_datasets(path, ds_name, input=None, lang="en"):
+def create_wordlevel_datasets(path, ds_name, input=None, lang="en", split_size=None, start_idx=None):
     if input is None:  # we read from txt files, and already saved the correct csv.
         input_file = f"{path}/{ds_name}.csv"
     else:
