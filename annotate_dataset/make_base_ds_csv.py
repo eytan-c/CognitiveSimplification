@@ -220,7 +220,7 @@ def read_files(regular_file: Union[str, pathlib.Path], simple_file: Union[str, p
 
 def get_TER_scores(reg_sents, sim_sents, nlp):
     result = []
-    for reg_line, sim_line in zip(reg_sents, sim_sents):
+    for reg_line, sim_line in tqdm(zip(reg_sents, sim_sents)):
         reg_doc = nlp(reg_line.strip())
         sim_doc = nlp(sim_line.strip())
         if len([token.text for token in sim_doc]) == 0:
@@ -285,15 +285,58 @@ def create_wordlevel_datasets(path, ds_name, input=None, lang="en", split_size=N
         df["sim_sent"] = df["sim_sent"].fillna("")
 
         time.sleep(client.CHECK_ALIVE_TIMEOUT + 30)
-        orig_tokenized, orig_parses = get_tokenized_and_parsing_from_list(df["reg_sent"].to_list(), NLP, nlpclient=client)
-        simp_tokenized, simp_parses = get_tokenized_and_parsing_from_list(df["sim_sent"].to_list(), NLP, nlpclient=client)
-        print("Adding TER to dataframe")
-        df["TER_score"] = get_TER_scores(df["reg_sent"].to_list(), df["sim_sent"].to_list(), NLP)
-        print("Adding word level")
-        res = get_word_level(orig_tokenized, orig_parses, simp_tokenized, simp_parses, word_aligner, index=len(orig_tokenized))
-        print("Concating and Saving dataframe")
-        pd.concat([df, res], axis=1).to_csv(
-            f"{path}/{ds_name}+actions+word_level.csv", encoding='utf-8', sep=';')
+        if split_size is None:
+            orig_tokenized, orig_parses = get_tokenized_and_parsing_from_list(df["reg_sent"].to_list(), NLP, nlpclient=client)
+            simp_tokenized, simp_parses = get_tokenized_and_parsing_from_list(df["sim_sent"].to_list(), NLP, nlpclient=client)
+            print("Adding TER to dataframe")
+            df["TER_score"] = get_TER_scores(df["reg_sent"].to_list(), df["sim_sent"].to_list(), NLP)
+            print("Adding word level")
+            res = get_word_level(orig_tokenized, orig_parses, simp_tokenized, simp_parses, word_aligner, index=len(orig_tokenized))
+            print("Concating and Saving dataframe")
+            pd.concat([df, res], axis=1).to_csv(
+                f"{path}/{ds_name}+actions+word_level.csv", encoding='utf-8', sep=';')
+        else:
+            assert isinstance(split_size, int)
+            assert isinstance(start_idx, int)
+
+            i = start_idx
+
+            while i + split_size < len(df):
+                sub_df = df.iloc[i:i+split_size, :]
+                print(f"Creating Split {i}-{i+split_size}")
+                orig_tokenized, orig_parses = get_tokenized_and_parsing_from_list(sub_df["reg_sent"].to_list(), NLP,
+                                                                                  nlpclient=client)
+                simp_tokenized, simp_parses = get_tokenized_and_parsing_from_list(sub_df["sim_sent"].to_list(), NLP,
+                                                                                  nlpclient=client)
+                print("\tAdding TER to dataframe")
+                sub_df["TER_score"] = get_TER_scores(sub_df["reg_sent"].to_list(),
+                                                     sub_df["sim_sent"].to_list(), NLP)
+                print("\tAdding word level")
+                res = get_word_level(orig_tokenized, orig_parses, simp_tokenized, simp_parses, word_aligner,
+                                     index=len(orig_tokenized))
+                print("\tConcating and Saving dataframe")
+                pd.concat([sub_df, res.set_index(sub_df.index)], axis=1).to_csv(
+                    f"{path}/{ds_name}+split-{i}-{i+split_size}+actions+word_level.csv", encoding='utf-8', sep=';')
+                print(f"Done with {i}-{i+split_size}\n")
+                i += split_size
+            if i < len(df):
+                sub_df = df.iloc[i:, :]
+                print(f"Creating Split {i}-{len(df)}")
+                orig_tokenized, orig_parses = get_tokenized_and_parsing_from_list(sub_df["reg_sent"].to_list(), NLP,
+                                                                                  nlpclient=client)
+                simp_tokenized, simp_parses = get_tokenized_and_parsing_from_list(sub_df["sim_sent"].to_list(), NLP,
+                                                                                  nlpclient=client)
+                print("\tAdding TER to dataframe")
+                sub_df["TER_score"] = get_TER_scores(sub_df["reg_sent"].to_list(),
+                                                     sub_df["sim_sent"].to_list(), NLP)
+                print("\tAdding word level")
+                res = get_word_level(orig_tokenized, orig_parses, simp_tokenized, simp_parses, word_aligner,
+                                     index=len(orig_tokenized))
+                print("\tConcating and Saving dataframe")
+                pd.concat([sub_df, res.set_index(sub_df.index)], axis=1).to_csv(
+                    f"{path}/{ds_name}+split-{i}-{len(df)}+actions+word_level.csv", encoding='utf-8', sep=';')
+                print(f"Done with {i}-{len(df)}\n")
+                i += split_size
 
 
 if __name__ == "__main__":  # TO_DO: Cleanup comment outs
@@ -315,6 +358,10 @@ if __name__ == "__main__":  # TO_DO: Cleanup comment outs
                             help="Path to save data to.")
     parser_csv.add_argument("--dataset_name", required=True, type=str,
                             help="Name of the dataset, the final output will be <dataset_name>+actions+word_level.csv")
+    parser_csv.add_argument("--split_size", type=int,
+                            help="For larger datasets, split into sub-sets to save processing work")
+    parser_csv.add_argument("--start_idx", type=int,
+                            help="For larger datasets, index from which to start the processing (for work that was stopped in the middle)")
 
     args = parser.parse_args()
 
@@ -325,4 +372,5 @@ if __name__ == "__main__":  # TO_DO: Cleanup comment outs
         df.to_csv(input_file, sep=";")
         args.input_file = None
 
-    create_wordlevel_datasets(args.data_path, args.dataset_name, args.input_file)
+    create_wordlevel_datasets(args.data_path, args.dataset_name, args.input_file,
+                              split_size=args.split_size, start_idx=args.start_idx)
