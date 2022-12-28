@@ -103,7 +103,11 @@ def classify_dataset(dataset: str, save_path: pathlib.Path, nlp, lex_probability
     data_file = pathlib.Path(f"{source_folder}/{dataset}{dataset_type}.csv")  # filepath to load
     old_df = pd.read_csv(data_file, sep=sep, on_bad_lines='skip')  # the old dataframe to analyze
     if 'alignment' not in old_df.columns:
+        if 'sentence_num' in old_df.columns and isinstance(eval(old_df['sentence_num'][0]), tuple):
+            old_df.rename(columns={'alignment': 'sentence_num'}, inplace=True)
         old_df['alignment'] = ["" for i in range(len(old_df))]
+    if 'entry_type' not in old_df.columns and 'align_type' in old_df.columns:
+        old_df.rename(columns={'align_type': 'entry_type'}, inplace=True)
     old_df.fillna(value="", inplace=True)  # remove NaNs from the old dataframe
 
     LOGGER.warning(f"Classifying Dataset {dataset}...")
@@ -209,7 +213,7 @@ if __name__ == "__main__":  # TO-DO: Cleanup comment outs
     parser.add_argument('--lang', type=str, default='en')  # TO-DO: Cleanup usage of the lang argument
     parser.add_argument('--dataset_type', type=str, default='+actions+word_level')
     parser.add_argument('--output_path', type=str, required=True, help="Output directory")
-    parser.add_argument('--output_type', required=True, default="both", choices=['both', 'txt', 'json'])
+    # parser.add_argument('--output_type', required=True, default="both", choices=['both', 'txt', 'json'])
     parser.add_argument('--datasets', required=True, nargs='+', help='The names of the datasets to analyze.')
     parser.add_argument('--source_folder', type=str, required=True)
     parser.add_argument('--sep', default=';', help='Delimiter for existing CSV files.')
