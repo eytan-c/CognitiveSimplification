@@ -36,6 +36,7 @@ _OTHER = ["percent_deleted_unused", "percent_added_unused", "reg_nbchars", "sim_
 _DS_GROUPS = {"ASSET": ("asset-test-all", "asset-valid-all"),
               "Cognitive": ("dhcs", "disability_fest_manual", "uncrpd"),
               "Newsela-Manual": ("newsela-manual-dev-all", "newsela-manual-test-all", "newsela-manual-train-all"),
+              "Newsela-Auto": ("newsela-auto",),
               "Wiki-Manual": ("wiki-manual-dev", "wiki-manual-test", "wiki-manual-train"),
               "Wiki-Auto": ("wiki_auto-train-combined", "wiki_auto-valid-combined")}
 
@@ -47,6 +48,7 @@ _DS_REMAP = {'asset-test-all': "ASSET test",
              'newsela-manual-dev-all': "NewselaManual dev",
              'newsela-manual-test-all': "NewselaManual test",
              'newsela-manual-train-all': "NewselaManual train",
+             "newsela-auto": "NewselaAuto full",
              'wiki-manual-dev': "WikiManual dev",
              'wiki-manual-test': "WikiManual test",
              'wiki-manual-train': "WikiManual train",
@@ -60,15 +62,17 @@ _DS_REMAP_SHORT = {'asset-test-all': "ASSET-ts",
                    'newsela-manual-dev-all': "NewM-dv",
                    'newsela-manual-test-all': "NewM-ts",
                    'newsela-manual-train-all': "NewM-tr",
+                   'newsela-auto': "NewA-f",
                    'wiki-manual-dev': "WikiM-dv",
                    'wiki-manual-test': "WikiM-ts",
                    'wiki-manual-train': "WikiM-tr",
                    'wiki_auto-train-combined': "WikiA-tr",
                    'wiki_auto-valid-combined': "WikiA-vl"}
 
-_DS_ORDER = ["UNCRPD", "FestAblitity", "NewselaManual test", "NewselaManual dev", "NewselaManual train", "ASSET test",
-             "ASSET valid", "WikiAuto valid", "WikiAuto train", "WikiManual test", "WikiManual dev", "WikiManual train"]
-_DS_ORDER_SHORT = ["UN-ts", "FA-ts", "NewM-ts", "NewM-dv", "NewM-tr", "ASSET-ts",
+_DS_ORDER = ["UNCRPD", "FestAblitity", "NewselaManual test", "NewselaManual dev", "NewselaManual train",
+             "NewselaAuto full","ASSET test", "ASSET valid", "WikiAuto valid", "WikiAuto train", "WikiManual test",
+             "WikiManual dev", "WikiManual train"]
+_DS_ORDER_SHORT = ["UN-ts", "FA-ts", "NewM-ts", "NewM-dv", "NewM-tr", "NewA-f", "ASSET-ts",
                    "ASSET-vl", "WikiA-vl", "WikiA-tr","WikiM-ts",  "WikiM-dv", "WikiM-tr"]
 
 _DS_COLOR_MAP = {'asset-test-all': "r",
@@ -78,6 +82,7 @@ _DS_COLOR_MAP = {'asset-test-all': "r",
                  'newsela-manual-dev-all': "b",
                  'newsela-manual-test-all': "b",
                  'newsela-manual-train-all': "b",
+                 'newsela-auto': "b",
                  'wiki-manual-dev': "r",
                  'wiki-manual-test': "r",
                  'wiki-manual-train': "r",
@@ -165,8 +170,8 @@ def show_action_histograms(datapath: pathlib.Path, analysis_type="full", title="
                             in zip(v.index, v)])
 
     fig = plt.figure(figsize=set_size(text_width, subplots=(7, 4)))
-    grid = GridSpec(4, 3, figure=fig, height_ratios=[1, 1, 1, 1])
-    for i in range(4):
+    grid = GridSpec(5, 3, figure=fig, height_ratios=[1, 1, 1, 1, 1])
+    for i in range(5):
         for j in range(3):
             if i != 0 or j != 0:
                 fig.add_subplot(grid[i, j], sharex=fig.axes[0])
@@ -178,7 +183,7 @@ def show_action_histograms(datapath: pathlib.Path, analysis_type="full", title="
     for ds in [_DS_REMAP[k] for k in actions.keys()]:
         g = sn.histplot(act_df[act_df["dataset"] == ds]["number"],ax=axs[col],bins=7)
         g.set(xlabel=None, ylabel=None)
-        if ds.startswith("Newsela"):
+        if ds.startswith("NewselaM"):
             g.set(title=f"NewselaM {ds.split(' ')[1]}")
         elif ds.startswith("WikiM"):
             g.set(title=f"WikiM {ds.split(' ')[1]}")
@@ -189,7 +194,8 @@ def show_action_histograms(datapath: pathlib.Path, analysis_type="full", title="
     if save_fig:
         plt.savefig(f"{title}_histograms", bbox_inches="tight")
     else:
-        plt.show(bbox_inches="tight")
+        # plt.show(bbox_inches="tight")
+        plt.show()
 
     plt.clf()
     plt.cla()
@@ -240,7 +246,8 @@ def show_action_histograms(datapath: pathlib.Path, analysis_type="full", title="
     if save_fig:
         plt.savefig(f"{title}_per_Actions", bbox_inches='tight')
     else:
-        plt.show(bbox_inches='tight')
+        # plt.show(bbox_inches='tight')
+        plt.show()
 
 
 def show_action_distribution_distances(datapath: pathlib.Path, distance_func=mean_pointwise_jsd, analysis_type="full",
@@ -273,12 +280,12 @@ def show_action_distribution_distances(datapath: pathlib.Path, distance_func=mea
     # pca_df = pd.DataFrame(pca.embedding_, index=pca_df.columns)
     pca_df = pca_df - pca_df.loc["disability_fest_manual", :]
     pca_df["Corpus"] = ["ASSET", "ASSET", "FestAbility", "UNCRPD", "NewselaManual", "NewselaManual", "NewselaManual",
-                        "WikiManual", "WikiManual", "WikiManual", "WikiAuto", "WikiAuto"]
+                        "NewselaAuto", "WikiManual", "WikiManual", "WikiManual", "WikiAuto", "WikiAuto"]
     g = sn.scatterplot(x=pca_df[0], y=pca_df[1], hue=pca_df["Corpus"], s=300, style=pca_df["Corpus"])
     g.set_xlabel("")
     g.set_ylabel("")
-    plt.ylim(-0.5, 1.1)
-    plt.xlim(-0.2, 0.22)
+    # plt.ylim(-0.5, 1.1)
+    # plt.xlim(-0.2, 0.22)
 
     for lh in g.legend_.legendHandles:
         lh.set_sizes([100])
@@ -413,7 +420,7 @@ def show_correlation_distances(datapath: pathlib.Path, analysis_type="full", tit
     pca_df = pd.DataFrame(pca.components_.T, index=pca_df.columns)
     pca_df = pca_df - pca_df.loc["disability_fest_manual", :]
     pca_df["Corpus"] = ["ASSET", "ASSET", "FestAbility", "UNCRPD", "NewselaManual", "NewselaManual", "NewselaManual",
-                        "WikiManual", "WikiManual", "WikiManual", "WikiAuto", "WikiAuto"]
+                        "NewselaAuto","WikiManual", "WikiManual", "WikiManual", "WikiAuto", "WikiAuto"]
     g = sn.scatterplot(x=pca_df[0], y=pca_df[1], hue=pca_df["Corpus"], s=300, style=pca_df["Corpus"])
     g.set_xlabel("")
     g.set_ylabel("")
