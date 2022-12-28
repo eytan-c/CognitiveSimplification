@@ -2,3 +2,9 @@
 *.iml
 .idea/*
 */__pycache__/*
+data/base_datasets/newsela-auto+revised.csv
+data/jsons/newsela_auto.json
+data/text_files/newsela-auto.txt
+data/dataset_analysis/newsela-auto+revised__analysis.txt
+/data/base_datasets/newsela-auto_base-splits/
+/data/base_datasets/newsela-auto_revised-splits/
